@@ -1,39 +1,8 @@
-use std::{
-    env::{self},
-    error::Error,
-    fs::File,
-    io::prelude::*,
-};
+use std::{error::Error, fs::File, io::prelude::*};
 
-pub struct Config {
-    query: String,
-    filename: String,
-    case_sensitive: bool,
-}
+pub mod config;
 
-impl Config {
-    pub fn new(mut args: impl Iterator<Item = String>) -> Result<Self, &'static str> {
-        args.next();
-
-        let query = match args.next() {
-            Some(query) => query,
-            None => return Err("Query argument not provided"),
-        };
-        let filename = match args.next() {
-            Some(filename) => filename,
-            None => return Err("Filename argument not provided"),
-        };
-        let case_sensitive = env::var("CASE_INSENSITIVE").is_err();
-
-        Ok(Self {
-            query,
-            filename,
-            case_sensitive,
-        })
-    }
-}
-
-pub fn run(config: Config) -> Result<Vec<String>, Box<dyn Error>> {
+pub fn run(config: config::Config) -> Result<Vec<String>, Box<dyn Error>> {
     let mut file = File::open(config.filename).expect("File could not be found!");
     let mut contents = String::new();
 
@@ -48,14 +17,14 @@ pub fn run(config: Config) -> Result<Vec<String>, Box<dyn Error>> {
     Ok(result.into_iter().map(|line| String::from(line)).collect())
 }
 
-pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     contents
         .lines()
         .filter(|line| line.contains(query))
         .collect()
 }
 
-pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     let query = query.to_lowercase();
     contents
         .lines()
@@ -72,7 +41,7 @@ mod config_tests {
     #[test]
     fn return_result_err_when_arg_query_not_provided() {
         let iter = vec!["arg1".to_string()].into_iter();
-        let result = Config::new(iter);
+        let result = config::Config::new(iter);
 
         assert!(result.is_err());
         assert_eq!(result.err().unwrap(), "Query argument not provided")
@@ -81,7 +50,7 @@ mod config_tests {
     #[test]
     fn return_result_err_when_arg_filename_not_provided() {
         let iter = vec!["arg1".to_string(), "query".to_string()].into_iter();
-        let result = Config::new(iter);
+        let result = config::Config::new(iter);
 
         assert!(result.is_err());
         assert_eq!(result.err().unwrap(), "Filename argument not provided")
@@ -93,7 +62,7 @@ mod config_tests {
         let filename = "filename".to_string();
         let iter = ["arg1".to_string(), query.clone(), filename.clone()].into_iter();
 
-        let config = Config::new(iter);
+        let config = config::Config::new(iter);
 
         assert!(config.is_ok());
 
@@ -123,7 +92,7 @@ duct.
         ",
         );
 
-        let config = Config::new(iter);
+        let config = config::Config::new(iter);
         let result = run(config.unwrap());
 
         assert!(result.is_ok());
@@ -183,7 +152,7 @@ Trust me.";
             "unexisting.txt".to_string(),
         ]
         .into_iter();
-        let config = Config::new(iter);
+        let config = config::Config::new(iter);
 
         run(config.unwrap());
     }

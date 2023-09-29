@@ -1,10 +1,10 @@
-use minigrep::Config;
+use minigrep::config;
 use std::{env, process};
 
 fn main() {
     let args = env::args();
 
-    let config = Config::new(args).unwrap_or_else(|err| {
+    let config = config::Config::new(args).unwrap_or_else(|err| {
         eprintln!("Problem parsing arguments: {}", err);
         process::exit(1);
     });
