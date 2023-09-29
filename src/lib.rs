@@ -185,6 +185,6 @@ Trust me.";
         .into_iter();
         let config = Config::new(iter);
 
-        let _ = run(config.unwrap());
+        run(config.unwrap());
     }
 }
