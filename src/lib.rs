@@ -33,7 +33,7 @@ impl Config {
     }
 }
 
-pub fn run<'a>(config: Config) -> Result<(), Box<dyn Error>> {
+pub fn run(config: Config) -> Result<Vec<String>, Box<dyn Error>> {
     let mut file = File::open(config.filename).expect("File could not be found!");
     let mut contents = String::new();
 
@@ -45,11 +45,7 @@ pub fn run<'a>(config: Config) -> Result<(), Box<dyn Error>> {
         search_case_insensitive(&config.query, &contents)
     };
 
-    for line in result {
-        println!("{}", line);
-    }
-
-    Ok(())
+    Ok(result.into_iter().map(|line| String::from(line)).collect())
 }
 
 pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
@@ -109,20 +105,32 @@ mod config_tests {
 
     #[test]
     fn return_ok_given_config() {
+        let query = "duct".to_string();
         let test_file = testfile::generate_name();
         let iter = [
             "exe".to_string(),
-            "query".to_string(),
+            query,
             test_file.to_str().unwrap().to_string(),
         ]
         .into_iter();
-        let _ = File::create(&test_file);
+
+        let mut file = File::create(&test_file).unwrap();
+        file.write_all(
+            b"\
+Rust:
+safe, fast, productive.
+duct.
+        ",
+        );
 
         let config = Config::new(iter);
-
         let result = run(config.unwrap());
 
         assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            vec!["safe, fast, productive.".to_string(), "duct.".to_string()]
+        );
     }
 
     #[test]

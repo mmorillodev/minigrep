@@ -9,9 +9,12 @@ fn main() {
         process::exit(1);
     });
 
-    if let Err(e) = minigrep::run(config) {
-        eprintln!("Application error: {}", e);
+    match minigrep::run(config) {
+        Ok(values) => println!("{:?}", values),
+        Err(err) => {
+            eprintln!("Application error: {}", err);
 
-        process::exit(1);
-    }
+            process::exit(1);
+        }
+    };
 }
