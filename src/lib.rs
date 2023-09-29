@@ -1,4 +1,9 @@
-use std::{env, error::Error, fs::File, io::prelude::*};
+use std::{
+    env::{self},
+    error::Error,
+    fs::File,
+    io::prelude::*,
+};
 
 pub struct Config {
     query: String,
@@ -7,15 +12,17 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(args: &[String]) -> Result<Self, &'static str> {
-        let args_qtt = args.len();
+    pub fn new(mut args: impl Iterator<Item = String>) -> Result<Self, &'static str> {
+        args.next();
 
-        if args_qtt < 3 {
-            return Err("Expected 2 arguments (query, filename)");
-        }
-
-        let query = args[1].clone();
-        let filename = args[2].clone();
+        let query = match args.next() {
+            Some(query) => query,
+            None => return Err("Query argument not provided"),
+        };
+        let filename = match args.next() {
+            Some(filename) => filename,
+            None => return Err("Filename argument not provided"),
+        };
         let case_sensitive = env::var("CASE_INSENSITIVE").is_err();
 
         Ok(Self {
@@ -46,28 +53,18 @@ pub fn run<'a>(config: Config) -> Result<(), Box<dyn Error>> {
 }
 
 pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
-    let mut result = Vec::new();
-
-    for line in contents.lines() {
-        if line.contains(query) {
-            result.push(line);
-        }
-    }
-
-    result
+    contents
+        .lines()
+        .filter(|line| line.contains(query))
+        .collect()
 }
 
 pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
-    let mut result = Vec::new();
     let query = query.to_lowercase();
-
-    for line in contents.lines() {
-        if line.to_lowercase().contains(&query) {
-            result.push(line);
-        }
-    }
-
-    result
+    contents
+        .lines()
+        .filter(|line| line.to_lowercase().contains(&query))
+        .collect()
 }
 
 #[cfg(test)]
@@ -77,22 +74,30 @@ mod config_tests {
     use super::*;
 
     #[test]
-    fn return_result_err_when_args_len_is_lower_than_three() {
-        let result = Config::new(&[String::from("arg1"), String::from("arg2")]);
+    fn return_result_err_when_arg_query_not_provided() {
+        let iter = vec!["arg1".to_string()].into_iter();
+        let result = Config::new(iter);
 
         assert!(result.is_err());
-        assert_eq!(
-            result.err().unwrap(),
-            "Expected 2 arguments (query, filename)"
-        )
+        assert_eq!(result.err().unwrap(), "Query argument not provided")
+    }
+
+    #[test]
+    fn return_result_err_when_arg_filename_not_provided() {
+        let iter = vec!["arg1".to_string(), "query".to_string()].into_iter();
+        let result = Config::new(iter);
+
+        assert!(result.is_err());
+        assert_eq!(result.err().unwrap(), "Filename argument not provided")
     }
 
     #[test]
     fn return_ok_along_with_config() {
-        let query = String::from("query");
-        let filename = String::from("filename");
+        let query = "query".to_string();
+        let filename = "filename".to_string();
+        let iter = ["arg1".to_string(), query.clone(), filename.clone()].into_iter();
 
-        let config = Config::new(&[String::from("exe"), query.clone(), filename.clone()]);
+        let config = Config::new(iter);
 
         assert!(config.is_ok());
 
@@ -105,15 +110,15 @@ mod config_tests {
     #[test]
     fn return_ok_given_config() {
         let test_file = testfile::generate_name();
+        let iter = [
+            "exe".to_string(),
+            "query".to_string(),
+            test_file.to_str().unwrap().to_string(),
+        ]
+        .into_iter();
         let _ = File::create(&test_file);
 
-        println!("Creating file with name: {}", test_file.to_str().unwrap());
-
-        let config = Config::new(&[
-            String::from("exe"),
-            String::from("query"),
-            String::from(test_file.to_str().unwrap()),
-        ]);
+        let config = Config::new(iter);
 
         let result = run(config.unwrap());
 
@@ -164,11 +169,13 @@ Trust me.";
     #[test]
     #[should_panic(expected = "File could not be found!")]
     fn panic_when_file_not_found() {
-        let config = Config::new(&[
-            String::from("exe"),
-            String::from("query"),
-            String::from("unexisting.txt"),
-        ]);
+        let iter = [
+            "exe".to_string(),
+            "query".to_string(),
+            "unexisting.txt".to_string(),
+        ]
+        .into_iter();
+        let config = Config::new(iter);
 
         let _ = run(config.unwrap());
     }
