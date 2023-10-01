@@ -37,7 +37,7 @@ impl fmt::Display for GrepOccourence {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{}: {}",
+            "{}:{}",
             self.line_number.to_string().green(),
             self.content
         )
