@@ -9,62 +9,6 @@ use std::{
 
 pub mod config;
 
-#[derive(Debug, PartialEq)]
-pub struct GrepResult {
-    pub filename: String,
-    pub occourences: Vec<GrepOccourence>,
-}
-
-#[derive(Debug, PartialEq)]
-pub struct GrepOccourence {
-    pub line_number: u32,
-    pub content: String,
-}
-
-impl GrepResult {
-    fn new(filename: String, occourences: Vec<GrepOccourence>) -> Self {
-        Self {
-            filename,
-            occourences,
-        }
-    }
-}
-
-impl GrepOccourence {
-    fn new(line_number: u32, content: String) -> Self {
-        Self {
-            line_number,
-            content,
-        }
-    }
-}
-
-impl fmt::Display for GrepOccourence {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}:{}",
-            self.line_number.to_string().green(),
-            self.content
-        )
-    }
-}
-
-impl fmt::Display for GrepResult {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}{}",
-            self.filename.cyan(),
-            self.occourences
-                .iter()
-                .fold(String::new(), |acc, occourence| acc
-                    + "\n"
-                    + &occourence.to_string())
-        )
-    }
-}
-
 pub fn run(config: config::Config) -> Result<Vec<GrepResult>, Box<dyn Error>> {
     let path = Path::new(&config.filename);
     let mut result: Vec<GrepResult> = Vec::new();
@@ -151,6 +95,62 @@ fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Option<Vec<Gre
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub struct GrepResult {
+    pub filename: String,
+    pub occourences: Vec<GrepOccourence>,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct GrepOccourence {
+    pub line_number: u32,
+    pub content: String,
+}
+
+impl GrepResult {
+    fn new(filename: String, occourences: Vec<GrepOccourence>) -> Self {
+        Self {
+            filename,
+            occourences,
+        }
+    }
+}
+
+impl GrepOccourence {
+    fn new(line_number: u32, content: String) -> Self {
+        Self {
+            line_number,
+            content,
+        }
+    }
+}
+
+impl fmt::Display for GrepOccourence {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}:{}",
+            self.line_number.to_string().green(),
+            self.content
+        )
+    }
+}
+
+impl fmt::Display for GrepResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}{}",
+            self.filename.cyan(),
+            self.occourences
+                .iter()
+                .fold(String::new(), |acc, occourence| acc
+                    + "\n"
+                    + &occourence.to_string())
+        )
+    }
+}
+
 #[cfg(test)]
 mod search_sensitive_test {
 
@@ -228,7 +228,7 @@ Duct tape.";
 }
 
 #[cfg(test)]
-mod scan_tests {
+mod scan_recursive_tests {
     // TODO: Create tests for directory scan
 }
 
