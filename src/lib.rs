@@ -1,9 +1,66 @@
-use std::{error::Error, fs::File, io::prelude::*};
+use colored::*;
+use std::{error::Error, fmt, fs::File, io::prelude::*};
 
 pub mod config;
 
-pub fn run(config: config::Config) -> Result<Vec<String>, Box<dyn Error>> {
-    let mut file = File::open(config.filename).expect("File could not be found!");
+#[derive(Debug, PartialEq)]
+pub struct GrepResult {
+    pub filename: String,
+    pub occourences: Vec<GrepOccourence>,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct GrepOccourence {
+    pub line_number: u32,
+    pub content: String,
+}
+
+impl GrepResult {
+    fn new(filename: String, occourences: Vec<GrepOccourence>) -> Self {
+        Self {
+            filename,
+            occourences,
+        }
+    }
+}
+
+impl GrepOccourence {
+    fn new(line_number: u32, content: String) -> Self {
+        Self {
+            line_number,
+            content,
+        }
+    }
+}
+
+impl fmt::Display for GrepOccourence {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}: {}",
+            self.line_number.to_string().green(),
+            self.content
+        )
+    }
+}
+
+impl fmt::Display for GrepResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}{}",
+            self.filename.cyan(),
+            self.occourences
+                .iter()
+                .fold(String::new(), |acc, occourence| acc
+                    + "\n"
+                    + &occourence.to_string())
+        )
+    }
+}
+
+pub fn run(config: config::Config) -> Result<GrepResult, Box<dyn Error>> {
+    let mut file = File::open(&config.filename).expect("File could not be found!");
     let mut contents = String::new();
 
     file.read_to_string(&mut contents)?;
@@ -14,26 +71,44 @@ pub fn run(config: config::Config) -> Result<Vec<String>, Box<dyn Error>> {
         search_case_insensitive(&config.query, &contents)
     };
 
-    Ok(result.into_iter().map(|line| String::from(line)).collect())
+    let grep_result = GrepResult::new(config.filename, result);
+
+    Ok(grep_result)
 }
 
-fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
-    contents
-        .lines()
-        .filter(|line| line.contains(query))
-        .collect()
+fn search<'a>(query: &str, contents: &'a str) -> Vec<GrepOccourence> {
+    let mut occourences = vec![];
+
+    for (line_number, content) in contents.lines().enumerate() {
+        if content.contains(&query) {
+            occourences.push(GrepOccourence::new(
+                (line_number + 1) as u32,
+                content.to_string(),
+            ));
+        }
+    }
+
+    occourences
 }
 
-fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<GrepOccourence> {
+    let mut occourences = vec![];
     let query = query.to_lowercase();
-    contents
-        .lines()
-        .filter(|line| line.to_lowercase().contains(&query))
-        .collect()
+
+    for (line_number, content) in contents.lines().enumerate() {
+        if content.to_lowercase().contains(&query) {
+            occourences.push(GrepOccourence::new(
+                (line_number + 1) as u32,
+                content.to_string(),
+            ));
+        }
+    }
+
+    occourences
 }
 
 #[cfg(test)]
-mod tests {
+mod lib_tests {
     use std::fs::File;
 
     use super::*;
@@ -60,12 +135,15 @@ duct.
 
         let config = config::Config::new(iter);
         let result = run(config.unwrap());
-
-        assert!(result.is_ok());
-        assert_eq!(
-            result.unwrap(),
-            vec!["safe, fast, productive.".to_string(), "duct.".to_string()]
+        let expected_result = GrepResult::new(
+            test_file.to_str().unwrap().to_string(),
+            vec![
+                GrepOccourence::new(2, "safe, fast, productive.".to_string()),
+                GrepOccourence::new(3, "duct.".to_string()),
+            ],
         );
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), expected_result);
     }
 
     #[test]
@@ -75,10 +153,14 @@ duct.
 Rust:
 safe, fast, productive.
 Pick three.";
+        let expected_result = vec![GrepOccourence::new(
+            2,
+            "safe, fast, productive.".to_string(),
+        )];
 
         let result = search(query, contents);
 
-        assert_eq!(&result, &vec!["safe, fast, productive."]);
+        assert_eq!(&result, &expected_result);
     }
 
     #[test]
@@ -89,10 +171,14 @@ Rust:
 safe, fast, productive.
 Pick three.
 Duct tape.";
+        let expected_result = vec![GrepOccourence::new(
+            2,
+            "safe, fast, productive.".to_string(),
+        )];
 
         let result = search(query, contents);
 
-        assert_eq!(&result, &vec!["safe, fast, productive."]);
+        assert_eq!(&result, &expected_result);
     }
 
     #[test]
@@ -103,10 +189,14 @@ Rust:
 safe, fast, productive.
 Pick three.
 Trust me.";
+        let expected_result = vec![
+            GrepOccourence::new(1, "Rust:".to_string()),
+            GrepOccourence::new(4, "Trust me.".to_string()),
+        ];
 
         let result = search_case_insensitive(query, contents);
 
-        assert_eq!(&result, &vec!["Rust:", "Trust me."]);
+        assert_eq!(&result, &expected_result);
     }
 
     #[test]
