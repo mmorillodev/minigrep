@@ -10,7 +10,9 @@ fn main() {
     });
 
     match minigrep::run(config) {
-        Ok(values) => println!("{}", values),
+        Ok(values) => values
+            .iter()
+            .for_each(|occourence| println!("{}", occourence)),
         Err(err) => {
             eprintln!("Application error: {}", err);
 
