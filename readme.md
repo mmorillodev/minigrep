@@ -18,8 +18,8 @@ cargo run $(query) $(filename)
 
 ## TODOs
 
-[X] Create structure to show the file name and the line number of the occurence in the result.
-[ ] Scan directories
-    [ ] Accept a depth option to determine how deep should we search in directories.  
-[ ] Accept regex pattern
+- [x] Create structure to show the file name and the line number of the occurence in the result.
+- [ ] Scan directories
+    - [ ] Accept a depth option to determine how deep should we search in directories.  
+- [ ] Accept regex pattern
 
