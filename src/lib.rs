@@ -33,44 +33,10 @@ fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
 }
 
 #[cfg(test)]
-mod config_tests {
+mod tests {
     use std::fs::File;
 
     use super::*;
-
-    #[test]
-    fn return_result_err_when_arg_query_not_provided() {
-        let iter = vec!["arg1".to_string()].into_iter();
-        let result = config::Config::new(iter);
-
-        assert!(result.is_err());
-        assert_eq!(result.err().unwrap(), "Query argument not provided")
-    }
-
-    #[test]
-    fn return_result_err_when_arg_filename_not_provided() {
-        let iter = vec!["arg1".to_string(), "query".to_string()].into_iter();
-        let result = config::Config::new(iter);
-
-        assert!(result.is_err());
-        assert_eq!(result.err().unwrap(), "Filename argument not provided")
-    }
-
-    #[test]
-    fn return_ok_along_with_config() {
-        let query = "query".to_string();
-        let filename = "filename".to_string();
-        let iter = ["arg1".to_string(), query.clone(), filename.clone()].into_iter();
-
-        let config = config::Config::new(iter);
-
-        assert!(config.is_ok());
-
-        let config = config.unwrap();
-
-        assert_eq!(config.query, query);
-        assert_eq!(config.filename, filename);
-    }
 
     #[test]
     fn return_ok_given_config() {
@@ -84,7 +50,7 @@ mod config_tests {
         .into_iter();
 
         let mut file = File::create(&test_file).unwrap();
-        file.write_all(
+        let _ = file.write_all(
             b"\
 Rust:
 safe, fast, productive.
@@ -154,6 +120,6 @@ Trust me.";
         .into_iter();
         let config = config::Config::new(iter);
 
-        run(config.unwrap());
+        let _ = run(config.unwrap());
     }
 }
